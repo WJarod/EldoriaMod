@@ -36,61 +36,94 @@ public class QuestGiverNPC extends Villager {
     private static final Random RANDOM = new Random();
     private static final Map<String, String> playerQuestions = new HashMap<>();
     private static final Map<String, Integer> playerAttempts = new HashMap<>();
+    private BlockPos campfirePos;
+    private BlockPos chestPos;
 
     static {
-        // 🔥 Zelda - Énigmes inspirées des temples
-        ENIGMES.put("J’obéis au vent et je tourne sans fin, mais quand le vent cesse, je me fige. Qui suis-je ?",
-                new String[]{"Moulin", "Je produis parfois de la musique ou de l’eau."});
+        // 🔥 Zelda - Enigmes inspirees des temples
+        ENIGMES.put("J'obeis au vent et je tourne sans fin, mais quand le vent cesse, je me fige. Qui suis-je ?",
+                new String[]{"Moulin", "Je produis parfois de la musique ou de l'eau."});
 
-        ENIGMES.put("Je suis né de la lumière, mais je vis dans l’ombre. On me chasse avec la clarté. Qui suis-je ?",
-                new String[]{"Fantôme", "Je hante souvent des temples abandonnés."});
+        ENIGMES.put("Je suis ne de la lumiere, mais je vis dans l'ombre. On me chasse avec la clarte. Qui suis-je ?",
+                new String[]{"Fantome", "Je hante souvent des temples abandonnes."});
 
         ENIGMES.put("Je vis sous terre et garde les secrets enfouis. Qui suis-je ?",
                 new String[]{"Statue", "Je veille silencieusement dans les ruines anciennes."});
 
-        ENIGMES.put("J’aime l’eau mais je ne suis pas un poisson. Je suis souvent rond et parfois je flotte. Qui suis-je ?",
-                new String[]{"Bulle", "On me trouve dans les grottes humides et les rivières souterraines."});
+        ENIGMES.put("J'aime l'eau mais je ne suis pas un poisson. Je suis souvent rond et parfois je flotte. Qui suis-je ?",
+                new String[]{"Bulle", "On me trouve dans les grottes humides et les rivieres souterraines."});
 
-        ENIGMES.put("Je danse avec le feu et éclaire les ténèbres. Qui suis-je ?",
-                new String[]{"Flamme", "Je brûle, mais je peux être soufflé."});
+        ENIGMES.put("Je danse avec le feu et eclaire les tenebres. Qui suis-je ?",
+                new String[]{"Flamme", "Je brule, mais je peux etre souffle."});
 
-        ENIGMES.put("On me joue mais je ne suis pas un instrument. On me tourne pour changer la mélodie. Qui suis-je ?",
+        ENIGMES.put("On me joue mais je ne suis pas un instrument. On me tourne pour changer la melodie. Qui suis-je ?",
                 new String[]{"Carillon", "On me trouve parfois dans les tours ou les maisons anciennes."});
 
-        ENIGMES.put("Je suis léger comme l’air mais je peux t’emporter très haut. Qui suis-je ?",
-                new String[]{"Courant ascendant", "Je peux apparaître près des volcans ou des temples célestes."});
+        ENIGMES.put("Je suis leger comme l'air mais je peux t'emporter tres haut. Qui suis-je ?",
+                new String[]{"Courant", "Je peux apparaitre pres des volcans ou des temples celestes."});
 
         // 🏹 Autres jeux d’aventure (Skyrim, Dark Souls, Elden Ring)
-        ENIGMES.put("On m’utilise pour voir dans l’ombre, mais je ne suis pas une torche. Qui suis-je ?",
-                new String[]{"Lanterne", "On me porte souvent en bandoulière."});
+        ENIGMES.put("On m'utilise pour voir dans l'ombre, mais je ne suis pas une torche. Qui suis-je ?",
+                new String[]{"Lanterne", "On me porte souvent en bandouliere."});
 
-        ENIGMES.put("Je suis une pierre, mais j’ai un œil. Qui suis-je ?",
-                new String[]{"Pierre de sagesse", "On me place souvent sur des portes anciennes."});
+        ENIGMES.put("Je suis une pierre, mais j'ai un oeil. Qui suis-je ?",
+                new String[]{"Sagesse", "On me place souvent sur des portes anciennes."});
 
-        ENIGMES.put("Je protège mais je ne suis pas un mur. Parfois, je suis magique. Qui suis-je ?",
+        ENIGMES.put("Je protege mais je ne suis pas un mur. Parfois, je suis magique. Qui suis-je ?",
                 new String[]{"Bouclier", "Certains me portent pour bloquer le feu ou la glace."});
 
-        ENIGMES.put("On me cherche, mais une fois trouvé, on ne peut plus me voir. Qui suis-je ?",
-                new String[]{"Secret", "Je peux être derrière un mur ou sous une cascade."});
+        ENIGMES.put("On me cherche, mais une fois trouve, on ne peut plus me voir. Qui suis-je ?",
+                new String[]{"Secret", "Je peux etre derriere un mur ou sous une cascade."});
 
-        ENIGMES.put("Je m’ouvre avec une clé, mais je ne suis pas une porte. Qui suis-je ?",
-                new String[]{"Coffre", "Je contiens parfois des trésors ou des pièges."});
+        ENIGMES.put("Je m'ouvre avec une cle, mais je ne suis pas une porte. Qui suis-je ?",
+                new String[]{"Coffre", "Je contiens parfois des tresors ou des pieges."});
 
-        // 🌿 Mystères de la nature et de l’exploration
+        // 🌿 Mysteres de la nature et de l'exploration
         ENIGMES.put("Je bois sans avoir soif et je grandis sans manger. Qui suis-je ?",
-                new String[]{"Arbre", "Je peux vivre des siècles et cacher des secrets."});
+                new String[]{"Arbre", "Je peux vivre des siecles et cacher des secrets."});
 
-        ENIGMES.put("Je peux être tranchante comme une épée, mais je ne suis pas un métal. Qui suis-je ?",
+        ENIGMES.put("Je peux etre tranchante comme une epee, mais je ne suis pas un metal. Qui suis-je ?",
                 new String[]{"Feuille", "Certains aventuriers me tissent pour faire des habits."});
 
-        ENIGMES.put("Je chante avec le vent mais je n’ai pas de bouche. Qui suis-je ?",
-                new String[]{"Flûte", "Les bardes m’aiment bien."});
+        ENIGMES.put("Je chante avec le vent mais je n'ai pas de bouche. Qui suis-je ?",
+                new String[]{"Flute", "Les bardes m'aiment bien."});
 
         ENIGMES.put("Je vis la nuit et meurs au matin. Qui suis-je ?",
-                new String[]{"Étoile filante", "On me voit souvent quand le ciel est dégagé."});
+                new String[]{"Etoile", "On me voit souvent quand le ciel est degage."});
 
         ENIGMES.put("On me cherche dans les ruines et parfois sous la terre. Qui suis-je ?",
-                new String[]{"Trésor", "Parfois, il faut une carte pour me trouver."});
+                new String[]{"Tresor", "Parfois, il faut une carte pour me trouver."});
+
+        // 🌟 Ajout de nouvelles enigmes
+        ENIGMES.put("J'ai un dos mais je n'ai pas de corps. Qui suis-je ?",
+                new String[]{"Livre", "Je contiens des histoires et des connaissances."});
+
+        ENIGMES.put("Plus je suis grand, moins on me voit. Qui suis-je ?",
+                new String[]{"Obscurite", "On me chasse avec la lumiere."});
+
+        ENIGMES.put("Je peux etre casse sans etre touche. Qui suis-je ?",
+                new String[]{"Promesse", "On me donne souvent avec sincerite."});
+
+        ENIGMES.put("J'ai des racines mais je ne suis pas une plante. Qui suis-je ?",
+                new String[]{"Famille", "Je me transmets de generation en generation."});
+
+        ENIGMES.put("Je m'etends quand je suis chaud et je me contracte quand je suis froid. Qui suis-je ?",
+                new String[]{"Metal", "Je suis utilise pour construire de grandes structures."});
+
+        ENIGMES.put("J'ai une tete mais pas de cerveau. Qui suis-je ?",
+                new String[]{"Monnaie", "On me trouve souvent dans les poches."});
+
+        ENIGMES.put("Je tombe sans jamais me faire mal. Qui suis-je ?",
+                new String[]{"Pluie", "On me voit souvent dans le ciel gris."});
+
+        ENIGMES.put("Je peux etre soufflee sans etre en feu. Qui suis-je ?",
+                new String[]{"Bulle", "Les enfants aiment jouer avec moi."});
+
+        ENIGMES.put("Je suis visible le jour et je disparais la nuit. Qui suis-je ?",
+                new String[]{"Ombre", "Je suis attache a toi mais tu ne peux pas me toucher."});
+
+        ENIGMES.put("Je suis fait de mots, mais je ne parle pas. Qui suis-je ?",
+                new String[]{"Livre", "Je peux contenir de la magie et du savoir."});
     }
 
     public QuestGiverNPC(EntityType<? extends Villager> entityType, Level world) {
@@ -174,7 +207,7 @@ public class QuestGiverNPC extends Villager {
                 world.addFreshEntity(npc);
 
                 // ✅ Génération aléatoire du campement autour du PNJ
-                placeCampfireAndChest(world, spawnPos);
+                npc.placeCampfireAndChest(world, spawnPos);
 
                 EldoriaMod.LOGGER.info("[DEBUG] PNJ spawné avec succès à X: {}, Y: {}, Z: {} autour de {}", x, y, z, targetPlayer.getName().getString());
                 return spawnPos;
@@ -256,13 +289,27 @@ public class QuestGiverNPC extends Villager {
 
                 // ✅ Planifier la disparition du PNJ et du camp après 30 secondes SANS bloquer
                 scheduler.schedule(() -> {
-                    world.getServer().execute(() -> { // Exécuter la suppression sur le thread principal de Minecraft
-                        if (pnj.isAlive()) {
-                            pnj.discard(); // Supprimer le PNJ
-                            world.setBlock(campfirePos, Blocks.AIR.defaultBlockState(), 3); // Supprimer le feu de camp
-                            world.setBlock(campfirePos.offset(1, 0, 0), Blocks.AIR.defaultBlockState(), 3); // Supprimer le coffre
-                            event.getPlayer().sendSystemMessage(Component.literal("🌫️ L'Aventurier Mystérieux a replié son camp et est parti explorer d'autres terres..."));
-                            EldoriaMod.LOGGER.info("[DEBUG] L'Aventurier Mystérieux et son camp ont disparu.");
+                    world.getServer().execute(() -> {
+                        try {
+                            Thread.sleep(30000); // ⏳ Attente de 30 secondes
+                            world.getServer().execute(() -> {
+                                if (pnj.isAlive()) {
+                                    pnj.discard(); // ✅ Supprimer le PNJ
+                                    if (pnj.campfirePos != null) {
+                                        world.setBlock(pnj.campfirePos, Blocks.AIR.defaultBlockState(), 3);
+                                        EldoriaMod.LOGGER.info("🔥 Feu de camp retiré à {}", pnj.campfirePos);
+                                    }
+                                    if (pnj.chestPos != null) {
+                                        world.setBlock(pnj.chestPos, Blocks.AIR.defaultBlockState(), 3);
+                                        EldoriaMod.LOGGER.info("📦 Coffre retiré à {}", pnj.chestPos);
+                                    }
+                                    event.getPlayer().sendSystemMessage(Component.literal("🌫️ L'Aventurier Mystérieux a replié son camp et est parti explorer d'autres terres..."));
+                                    EldoriaMod.LOGGER.info("[DEBUG] L'Aventurier Mystérieux et son camp ont disparu.");
+                                }
+                            });
+                        } catch (InterruptedException e) {
+                            EldoriaMod.LOGGER.error("❌ Erreur dans le timer de disparition du PNJ", e);
+                            Thread.currentThread().interrupt();
                         }
                     });
                 }, 30, TimeUnit.SECONDS);
@@ -290,7 +337,7 @@ public class QuestGiverNPC extends Villager {
     /**
      * Place un feu de camp et un coffre dans un rayon de 4 blocs autour du PNJ.
      */
-    private static void placeCampfireAndChest(ServerLevel world, BlockPos centerPos) {
+    private void placeCampfireAndChest(ServerLevel world, BlockPos centerPos) {
         Random random = new Random();
         BlockPos campfirePos = null;
         BlockPos chestPos = null;
@@ -320,12 +367,14 @@ public class QuestGiverNPC extends Villager {
         // ✅ Placer le feu de camp s'il a une position valide
         if (campfirePos != null) {
             world.setBlock(campfirePos, Blocks.CAMPFIRE.defaultBlockState(), 3);
+            this.campfirePos = campfirePos;  // ✅ Sauvegarde dans l'instance
             EldoriaMod.LOGGER.info("🔥 Feu de camp placé au camp à {}", campfirePos);
         }
 
         // ✅ Placer le coffre s'il a une position valide
         if (chestPos != null) {
             world.setBlock(chestPos, Blocks.CHEST.defaultBlockState(), 3);
+            this.chestPos = chestPos;
             EldoriaMod.LOGGER.info("📦 Coffre placé au camp à {}", chestPos);
 
             // 🔧 Solution : copier chestPos dans une variable finale pour éviter les erreurs avec les lambdas

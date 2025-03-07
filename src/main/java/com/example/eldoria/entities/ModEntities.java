@@ -1,10 +1,11 @@
+
 package com.example.eldoria.entities;
 
 import com.example.eldoria.EldoriaMod;
 import com.example.eldoria.npcs.QuestGiverNPC;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -21,16 +22,14 @@ public class ModEntities {
 
     public static final RegistryObject<EntityType<QuestGiverNPC>> QUEST_GIVER_NPC = ENTITIES.register(
             "quest_giver_npc",
-            () -> EntityType.Builder.of(QuestGiverNPC::new, MobCategory.MISC)
-                    .sized(0.6F, 1.95F) // Taille du PNJ
+            () -> EntityType.Builder.<QuestGiverNPC>of(QuestGiverNPC::new, MobCategory.MISC)
+                    .sized(0.6F, 1.95F) // ✅ Même taille qu'un joueur
                     .clientTrackingRange(10)
                     .build("quest_giver_npc")
     );
 
     public static void register(IEventBus eventBus) {
         ENTITIES.register(eventBus);
-        // Suppression de eventBus.addListener(ModEntities::registerAttributes);
-        // Car l'événement est déjà géré par @SubscribeEvent ci-dessous
     }
 
     @SubscribeEvent
