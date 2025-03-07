@@ -1,20 +1,27 @@
 package com.example.eldoria;
 
+import com.example.eldoria.config.Config;
 import com.example.eldoria.entities.ModEntities;
 import com.example.eldoria.events.QuestNPCSpawner;
 import com.example.eldoria.exploration.BiomeAlertProcedure;
 import com.example.eldoria.exploration.ExplorationRanking;
 import com.example.eldoria.exploration.ExplorationRewards;
 import com.example.eldoria.commands.RankingCommand;
+import com.example.eldoria.network.PacketHandler;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.ModLoadingContext;
 
+@Mod.EventBusSubscriber(modid = "eldoria", bus = Mod.EventBusSubscriber.Bus.MOD)
 @Mod(EldoriaMod.MODID)
 public class EldoriaMod {
     public static final String MODID = "eldoria";
@@ -22,6 +29,7 @@ public class EldoriaMod {
 
     public EldoriaMod() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, Config.CLIENT_SPEC);
 
         LOGGER.info("✅ Mod Eldoria chargé avec succès !");
 
@@ -47,5 +55,10 @@ public class EldoriaMod {
     public void onRegisterCommands(RegisterCommandsEvent event) {
         RankingCommand.register(event.getDispatcher());
         LOGGER.info("📜 Commande /classement enregistrée !");
+    }
+
+    @SubscribeEvent
+    public static void setup(final FMLCommonSetupEvent event) {
+        PacketHandler.register(); // ✅ Appel de la bonne méthode
     }
 }

@@ -2,26 +2,32 @@ package com.example.eldoria.npcs;
 
 import com.example.eldoria.EldoriaMod;
 import com.example.eldoria.entities.ModEntities;
+import com.example.eldoria.events.ClientEventHandler;
 import com.example.eldoria.exploration.ExplorationRewards;
+import com.example.eldoria.network.PacketHandler;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.ServerChatEvent;
+import com.example.eldoria.network.QuestGiverPacket;
+import net.minecraftforge.network.NetworkDirection;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -40,100 +46,46 @@ public class QuestGiverNPC extends Villager {
     private BlockPos chestPos;
 
     static {
-        // 🔥 Zelda - Enigmes inspirees des temples
-        ENIGMES.put("J'obeis au vent et je tourne sans fin, mais quand le vent cesse, je me fige. Qui suis-je ?",
-                new String[]{"Moulin", "Je produis parfois de la musique ou de l'eau."});
+        // ⚔️ Énigmes avec plusieurs réponses possibles
 
-        ENIGMES.put("Je suis ne de la lumiere, mais je vis dans l'ombre. On me chasse avec la clarte. Qui suis-je ?",
-                new String[]{"Fantome", "Je hante souvent des temples abandonnes."});
+        ENIGMES.put("Je protège mais je ne suis pas un mur. Qui suis-je ?",
+                new String[]{"Bouclier", "Épée", "Casque", "Plastron", "On me porte pour bloquer les attaques."});
 
-        ENIGMES.put("Je vis sous terre et garde les secrets enfouis. Qui suis-je ?",
-                new String[]{"Statue", "Je veille silencieusement dans les ruines anciennes."});
+        ENIGMES.put("Je m'ouvre avec une clé, mais je ne suis pas une porte. Qui suis-je ?",
+                new String[]{"Coffre", "Livre", "Porte", "Sac", "Je peux contenir des trésors ou des pièges."});
 
-        ENIGMES.put("J'aime l'eau mais je ne suis pas un poisson. Je suis souvent rond et parfois je flotte. Qui suis-je ?",
-                new String[]{"Bulle", "On me trouve dans les grottes humides et les rivieres souterraines."});
+        ENIGMES.put("Je suis une arme tranchante mais je ne coupe pas le papier. Qui suis-je ?",
+                new String[]{"Épée", "Dague", "Hache", "Flèche", "On me forge pour les combats."});
 
-        ENIGMES.put("Je danse avec le feu et eclaire les tenebres. Qui suis-je ?",
-                new String[]{"Flamme", "Je brule, mais je peux etre souffle."});
+        ENIGMES.put("J’éclaire la nuit mais je ne suis pas une étoile. Qui suis-je ?",
+                new String[]{"Torche", "Flamme", "Lanterne", "Lampe", "On me porte souvent dans les grottes."});
 
-        ENIGMES.put("On me joue mais je ne suis pas un instrument. On me tourne pour changer la melodie. Qui suis-je ?",
-                new String[]{"Carillon", "On me trouve parfois dans les tours ou les maisons anciennes."});
+        ENIGMES.put("Je danse avec le feu et éclaire les ténèbres. Qui suis-je ?",
+                new String[]{"Flamme", "Lumière", "Torche", "Éclair", "Je brûle mais je peux être soufflée."});
 
-        ENIGMES.put("Je suis leger comme l'air mais je peux t'emporter tres haut. Qui suis-je ?",
-                new String[]{"Courant", "Je peux apparaitre pres des volcans ou des temples celestes."});
-
-        // 🏹 Autres jeux d’aventure (Skyrim, Dark Souls, Elden Ring)
-        ENIGMES.put("On m'utilise pour voir dans l'ombre, mais je ne suis pas une torche. Qui suis-je ?",
-                new String[]{"Lanterne", "On me porte souvent en bandouliere."});
-
-        ENIGMES.put("Je suis une pierre, mais j'ai un oeil. Qui suis-je ?",
-                new String[]{"Sagesse", "On me place souvent sur des portes anciennes."});
-
-        ENIGMES.put("Je protege mais je ne suis pas un mur. Parfois, je suis magique. Qui suis-je ?",
-                new String[]{"Bouclier", "Certains me portent pour bloquer le feu ou la glace."});
-
-        ENIGMES.put("On me cherche, mais une fois trouve, on ne peut plus me voir. Qui suis-je ?",
-                new String[]{"Secret", "Je peux etre derriere un mur ou sous une cascade."});
-
-        ENIGMES.put("Je m'ouvre avec une cle, mais je ne suis pas une porte. Qui suis-je ?",
-                new String[]{"Coffre", "Je contiens parfois des tresors ou des pieges."});
-
-        // 🌿 Mysteres de la nature et de l'exploration
         ENIGMES.put("Je bois sans avoir soif et je grandis sans manger. Qui suis-je ?",
-                new String[]{"Arbre", "Je peux vivre des siecles et cacher des secrets."});
-
-        ENIGMES.put("Je peux etre tranchante comme une epee, mais je ne suis pas un metal. Qui suis-je ?",
-                new String[]{"Feuille", "Certains aventuriers me tissent pour faire des habits."});
-
-        ENIGMES.put("Je chante avec le vent mais je n'ai pas de bouche. Qui suis-je ?",
-                new String[]{"Flute", "Les bardes m'aiment bien."});
-
-        ENIGMES.put("Je vis la nuit et meurs au matin. Qui suis-je ?",
-                new String[]{"Etoile", "On me voit souvent quand le ciel est degage."});
-
-        ENIGMES.put("On me cherche dans les ruines et parfois sous la terre. Qui suis-je ?",
-                new String[]{"Tresor", "Parfois, il faut une carte pour me trouver."});
-
-        // 🌟 Ajout de nouvelles enigmes
-        ENIGMES.put("J'ai un dos mais je n'ai pas de corps. Qui suis-je ?",
-                new String[]{"Livre", "Je contiens des histoires et des connaissances."});
-
-        ENIGMES.put("Plus je suis grand, moins on me voit. Qui suis-je ?",
-                new String[]{"Obscurite", "On me chasse avec la lumiere."});
-
-        ENIGMES.put("Je peux etre casse sans etre touche. Qui suis-je ?",
-                new String[]{"Promesse", "On me donne souvent avec sincerite."});
-
-        ENIGMES.put("J'ai des racines mais je ne suis pas une plante. Qui suis-je ?",
-                new String[]{"Famille", "Je me transmets de generation en generation."});
-
-        ENIGMES.put("Je m'etends quand je suis chaud et je me contracte quand je suis froid. Qui suis-je ?",
-                new String[]{"Metal", "Je suis utilise pour construire de grandes structures."});
-
-        ENIGMES.put("J'ai une tete mais pas de cerveau. Qui suis-je ?",
-                new String[]{"Monnaie", "On me trouve souvent dans les poches."});
+                new String[]{"Arbre", "Plante", "Fleur", "Buisson", "Je peux vivre des siècles et cacher des secrets."});
 
         ENIGMES.put("Je tombe sans jamais me faire mal. Qui suis-je ?",
-                new String[]{"Pluie", "On me voit souvent dans le ciel gris."});
+                new String[]{"Pluie", "Neige", "Feuille", "Cendre", "On me voit souvent dans le ciel gris."});
 
-        ENIGMES.put("Je peux etre soufflee sans etre en feu. Qui suis-je ?",
-                new String[]{"Bulle", "Les enfants aiment jouer avec moi."});
+        ENIGMES.put("Je suis visible le jour et disparais la nuit. Qui suis-je ?",
+                new String[]{"Ombre", "Fantôme", "Mirage", "Reflet", "Je suis attachée à toi mais tu ne peux pas me toucher."});
 
-        ENIGMES.put("Je suis visible le jour et je disparais la nuit. Qui suis-je ?",
-                new String[]{"Ombre", "Je suis attache a toi mais tu ne peux pas me toucher."});
+        ENIGMES.put("On me cherche mais une fois trouvé, on ne peut plus me voir. Qui suis-je ?",
+                new String[]{"Secret", "Étoile", "Souvenir", "Mirage", "Je peux être caché derrière un mur ou sous une cascade."});
 
-        ENIGMES.put("Je suis fait de mots, mais je ne parle pas. Qui suis-je ?",
-                new String[]{"Livre", "Je peux contenir de la magie et du savoir."});
+        ENIGMES.put("On me joue mais je ne suis pas un instrument. On me tourne pour changer la mélodie. Qui suis-je ?",
+                new String[]{"Carillon", "Flûte", "Cloche", "Harmonica", "On me trouve parfois dans les tours ou les maisons anciennes."});
+
+        ENIGMES.put("J'ai un dos mais pas de corps. Qui suis-je ?",
+                new String[]{"Livre", "Sac", "Table", "Boîte", "Je contiens des histoires et des connaissances."});
     }
 
     public QuestGiverNPC(EntityType<? extends Villager> entityType, Level world) {
         super(entityType, world);
-        this.setVillagerData(this.getVillagerData().setProfession(VillagerProfession.NONE)); // Pas de profession spécifique
+        this.setVillagerData(this.getVillagerData().setProfession(VillagerProfession.NONE));
     }
-
-
-    // ✅ Ajout d'un planificateur global pour gérer les tâches différées sans bloquer
-    private static final java.util.concurrent.ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
@@ -142,19 +94,48 @@ public class QuestGiverNPC extends Villager {
                 .add(Attributes.FOLLOW_RANGE, 32.0);
     }
 
+    // ✅ Ajout d'un planificateur global pour gérer les tâches différées sans bloquer
+    private static final java.util.concurrent.ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        this.goalSelector.addGoal(1, new LookAtPlayerGoal(this, net.minecraft.world.entity.player.Player.class, 8.0F));
+        this.goalSelector.addGoal(1, new LookAtPlayerGoal(this, Player.class, 8.0F));
     }
 
     /**
-     * Permet l'interaction avec le joueur lorsqu'il fait un clic droit sur le PNJ.
+     * Interaction avec le PNJ pour poser une énigme au joueur.
      */
     @Override
-    public InteractionResult interactAt(net.minecraft.world.entity.player.Player player, Vec3 hitVec, InteractionHand hand) {
-        if (!this.level().isClientSide) { // Vérifier que nous sommes côté serveur
-            interactWithPlayer(player);
+    public InteractionResult interactAt(Player player, Vec3 hitVec, InteractionHand hand) {
+        if (!this.level().isClientSide) {
+            String question = getRandomEnigme();
+            String[] possibleAnswers = ENIGMES.get(question); // Récupérer les réponses possibles
+            String correctAnswer = possibleAnswers[0]; // La première réponse est toujours la bonne avant mélange
+
+            // Mélanger les réponses pour éviter que la bonne soit toujours en premier
+            List<String> shuffledAnswers = new ArrayList<>(Arrays.asList(possibleAnswers));
+            Collections.shuffle(shuffledAnswers);
+
+            // Trouver le nouvel index de la bonne réponse après mélange
+            int correctAnswerIndex = shuffledAnswers.indexOf(correctAnswer);
+
+            // ✅ Stocke la question pour éviter l'erreur "Je ne t’ai pas encore posé de question !"
+            String playerName = player.getName().getString();
+            playerQuestions.put(playerName, question);
+
+            EldoriaMod.LOGGER.info("[QUEST GIVER] {} reçoit la question '{}'", playerName, question);
+            EldoriaMod.LOGGER.info("[QUEST GIVER] Contenu de playerQuestions après ajout : {}", playerQuestions);
+
+            // ✅ Ouvre la GUI côté client en envoyant un packet au lieu d'appeler directement la GUI
+            if (player instanceof ServerPlayer serverPlayer) {
+                PacketHandler.CHANNEL.sendTo(
+                        new QuestGiverPacket(question, shuffledAnswers.toArray(new String[0]), correctAnswerIndex),
+                        serverPlayer.connection.connection,
+                        NetworkDirection.PLAY_TO_CLIENT
+                );
+            }
+
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
@@ -223,23 +204,6 @@ public class QuestGiverNPC extends Villager {
         }
     }
 
-
-    /**
-     * Interaction avec le joueur pour lui poser une énigme.
-     */
-    public void interactWithPlayer(net.minecraft.world.entity.player.Player player) {
-        String playerName = player.getName().getString();
-
-        if (!playerQuestions.containsKey(playerName)) {
-            String question = getRandomEnigme();
-            playerQuestions.put(playerName, question);
-            playerAttempts.put(playerName, 0);
-            player.sendSystemMessage(Component.literal("📜 [Aventurier Mystérieux] : " + question));
-        } else {
-            player.sendSystemMessage(Component.literal("📜 [Aventurier Mystérieux] : Réponds-moi d'abord !"));
-        }
-    }
-
     public static boolean hasPendingQuestion(String playerName) {
         return playerQuestions.containsKey(playerName);
     }
@@ -250,8 +214,7 @@ public class QuestGiverNPC extends Villager {
     }
 
     /**
-     * Vérification de la réponse du joueur.
-     */
+     * Vérification de la réponse du joueur v1.
     public static void checkAnswer(String playerName, String response, ServerChatEvent event) {
         String receivedMessage = response.trim(); // Nettoyage de la réponse
         String cleanedMessage = receivedMessage.replaceAll("literal\\{(.*)}", "$1"); // Enlève "literal{}"
@@ -265,6 +228,8 @@ public class QuestGiverNPC extends Villager {
             event.getPlayer().sendSystemMessage(Component.literal("📜 [Aventurier Mystérieux] : Je ne t’ai pas encore posé de question !"));
             return;
         }
+
+        String correctAnswer = ENIGMES.getOrDefault(playerQuestions.get(playerName), new String[]{"", ""})[0];
 
         int attempts = playerAttempts.getOrDefault(playerName, 0);
 
@@ -327,8 +292,68 @@ public class QuestGiverNPC extends Villager {
             }
             playerAttempts.put(playerName, attempts);
         }
+    }*/
+
+    /**
+     * Vérifie la réponse du joueur et affiche le résultat dans l'interface sans utiliser le chat.
+     */
+    public static void checkAnswer(String playerName, String response, ServerPlayer player) {
+        EldoriaMod.LOGGER.info("[CHECK ANSWER] Contenu de playerQuestions : {}", playerQuestions);
+        EldoriaMod.LOGGER.info("[CHECK ANSWER] Le joueur {} tente de répondre à une question.", playerName);
+
+        if (!playerQuestions.containsKey(playerName)) {
+            player.displayClientMessage(Component.literal("📜 [Aventurier Mystérieux] : Je ne t’ai pas encore posé de question !"), true);
+            EldoriaMod.LOGGER.error("[CHECK ANSWER] ERREUR: Aucune question trouvée pour {}", playerName);
+            return;
+        }
+
+        String question = playerQuestions.get(playerName);
+        String expectedAnswer = ENIGMES.getOrDefault(question, new String[]{"", ""})[0];
+
+        EldoriaMod.LOGGER.info("[DEBUG] Réponse reçue de {} : '{}'", playerName, response);
+        EldoriaMod.LOGGER.info("[DEBUG] Réponse attendue : '{}'", expectedAnswer);
+
+        int attempts = playerAttempts.getOrDefault(playerName, 0);
+
+        if (response.equalsIgnoreCase(expectedAnswer)) {
+            // ✅ Affichage de l'animation UI avant toute autre action
+            player.displayClientMessage(Component.literal("🎉 [Aventurier Mystérieux] : Bravo, aventurier ! Voici ton indice..."), true);
+
+            EldoriaMod.LOGGER.info("[CHECK ANSWER] Appel de generateTreasure pour {}", player.getName().getString());
+
+            player.getServer().execute(() -> {
+                BlockPos treasureCoords = ExplorationRewards.generateTreasure(player);
+                if (treasureCoords == null) {
+                    EldoriaMod.LOGGER.error("[CHECK ANSWER] Échec : generateTreasure a retourné null !");
+                } else {
+                    EldoriaMod.LOGGER.info("[CHECK ANSWER] Trésor généré avec succès à {}", treasureCoords);
+                    // ❌ Ne pas appeler `giveExplorerBook()` ici car il est déjà dans `generateTreasure()`
+                }
+            });
+
+            // ✅ Nettoyage de la question après validation
+            playerQuestions.remove(playerName);
+            playerAttempts.remove(playerName);
+        } else {
+            attempts++;
+
+            if (attempts == 2) {
+                player.displayClientMessage(Component.literal("💡 Indice : " + ENIGMES.get(question)[1]), true);
+            } else if (attempts >= 3) {
+                player.displayClientMessage(Component.literal("⏳ [Aventurier Mystérieux] : Tu as échoué... Reviens plus tard !"), true);
+                playerQuestions.remove(playerName);
+                playerAttempts.remove(playerName);
+            } else {
+                player.displayClientMessage(Component.literal("❌ [Aventurier Mystérieux] : Ce n'est pas la bonne réponse ! Réessaye."), true);
+            }
+
+            playerAttempts.put(playerName, attempts);
+        }
     }
 
+    /**
+     * Sélectionne une énigme aléatoire.
+     */
     private String getRandomEnigme() {
         Object[] keys = ENIGMES.keySet().toArray();
         return (String) keys[RANDOM.nextInt(keys.length)];

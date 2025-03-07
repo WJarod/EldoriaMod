@@ -2,6 +2,7 @@ package com.example.eldoria.exploration;
 
 import com.example.eldoria.EldoriaMod;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -29,53 +30,115 @@ public class ExplorationRewards {
     private static final Random random = new Random();
 
     public static void checkForRewards(Player player) {
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            LOGGER.warn("❌ Impossible de générer un trésor : le joueur {} n'est pas un ServerPlayer !", player.getName().getString());
+            return; // 🚨 On arrête l'exécution si ce n'est pas un joueur serveur
+        }
+
         int biomesExplored = ExplorationRanking.getPlayerBiomeCount(player);
         LOGGER.info("🎖 Vérification des récompenses... {} biomes explorés.", biomesExplored);
 
-        if (biomesExplored % 5 == 0) {  // ✅ Trésor tous les 5 biomes explorés
-            generateTreasure(player);
+        // ✅ Ajout d'un log pour vérifier si la condition est remplie
+        if (biomesExplored % 5 == 0 && biomesExplored > 0) {
+            LOGGER.info("🎁 Génération d'un trésor car {} biomes ont été explorés par {}", biomesExplored, player.getName().getString());
+            generateTreasure(serverPlayer);
+        } else {
+            LOGGER.info("❌ Condition non remplie : pas de trésor généré. (Biomes explorés : {})", biomesExplored);
         }
     }
 
-    public static BlockPos generateTreasure(Player player) {
-        ServerLevel world = (ServerLevel) player.level();
+    public static BlockPos generateTreasure(ServerPlayer player) {
+        ServerLevel world = player.serverLevel();
         BlockPos playerPos = player.blockPosition();
-
         int attempts = 0;
+
+        EldoriaMod.LOGGER.info("[DEBUG] Lancement de generateTreasure pour {}", player.getName().getString());
+
         while (attempts < 10) { // 🔄 Essayer jusqu'à 10 fois
             attempts++;
 
             int distance = 250 + random.nextInt(251);
             double angle = random.nextDouble() * 2 * Math.PI;
-
             int x = playerPos.getX() + (int) (distance * Math.cos(angle));
             int z = playerPos.getZ() + (int) (distance * Math.sin(angle));
             int y = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z);
 
             BlockPos surfacePos = new BlockPos(x, y, z);
 
-            if (world.getBlockState(surfacePos.below()).isSolid()) { // ✅ Si le bloc est solide, on valide
+            // ✅ Vérification améliorée : solide, non liquide, pas de feuillage, pas de vigne
+            if (world.getBlockState(surfacePos.below()).isSolid() &&
+                    !world.getBlockState(surfacePos.below()).getFluidState().isSource() &&
+                    !isInvalidBlock(world, surfacePos.below())) {
+
                 world.setBlock(surfacePos, Blocks.CHEST.defaultBlockState(), 3);
-                LOGGER.info("📜 Trésor généré aux coordonnées : X={}, Y={}, Z={}", surfacePos.getX(), surfacePos.getY(), surfacePos.getZ());
+                EldoriaMod.LOGGER.info("📜 Trésor généré aux coordonnées : X={}, Y={}, Z={}", x, y, z);
 
                 world.getServer().execute(() -> {
-                    if (!addLootToChest(world, surfacePos)) {
-                        LOGGER.error("❌ [ERREUR] Impossible de remplir le coffre au trésor !");
+                    boolean lootAdded = addLootToChest(world, surfacePos);
+                    if (!lootAdded) {
+                        EldoriaMod.LOGGER.error("❌ [ERREUR] Impossible de remplir le coffre au trésor !");
+                    } else {
+                        EldoriaMod.LOGGER.info("✅ Loot ajouté avec succès dans le coffre !");
+                        giveExplorerBook(player, surfacePos);
                     }
                 });
-
-                giveExplorerBook(player, surfacePos.getX(), surfacePos.getY(), surfacePos.getZ());
-                player.displayClientMessage(Component.literal("Un Aventurier Mystérieux a laissé un indice… Consultez votre journal !"), false);
 
                 return surfacePos;
             }
 
-            EldoriaMod.LOGGER.warn("⚠️ [WARNING] Tentative de spawn sur un bloc non solide ! Recalcul...");
+            EldoriaMod.LOGGER.warn("⚠️ [WARNING] Tentative {} : Spawn sur un bloc non valide. Recalcul...", attempts);
         }
 
-        // 🚨 Si après 10 tentatives on ne trouve rien, on abandonne
-        EldoriaMod.LOGGER.error("❌ Impossible de générer un trésor sur une surface correcte après 10 tentatives !");
-        return playerPos; // Retourne la position du joueur pour éviter un crash
+        // 🚨 Dernier recours : Spawn proche du joueur si impossible de générer ailleurs
+        EldoriaMod.LOGGER.error("❌ Impossible de générer un trésor après 10 tentatives ! Tentative de spawn à proximité du joueur.");
+
+        for (int i = 0; i < 5; i++) { // Essayer jusqu'à 5 fois autour du joueur
+            int offsetX = -5 + random.nextInt(11);
+            int offsetZ = -5 + random.nextInt(11);
+            int y = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, playerPos.getX() + offsetX, playerPos.getZ() + offsetZ);
+            BlockPos closePos = new BlockPos(playerPos.getX() + offsetX, y, playerPos.getZ() + offsetZ);
+
+            if (world.getBlockState(closePos.below()).isSolid() &&
+                    !world.getBlockState(closePos.below()).getFluidState().isSource() &&
+                    !isInvalidBlock(world, closePos.below())) {
+
+                world.setBlock(closePos, Blocks.CHEST.defaultBlockState(), 3);
+                EldoriaMod.LOGGER.info("📜 Trésor forcé aux coordonnées proches du joueur : X={}, Y={}, Z={}", closePos.getX(), closePos.getY(), closePos.getZ());
+
+                world.getServer().execute(() -> {
+                    boolean lootAdded = addLootToChest(world, closePos);
+                    if (!lootAdded) {
+                        EldoriaMod.LOGGER.error("❌ [ERREUR] Impossible de remplir le coffre au trésor !");
+                    } else {
+                        giveExplorerBook(player, closePos);
+                    }
+                });
+
+                return closePos;
+            }
+        }
+
+        EldoriaMod.LOGGER.error("❌ Impossible de générer un trésor même à proximité du joueur !");
+        return null; // 🚨 Aucun trésor généré
+    }
+
+    private static boolean isInvalidBlock(ServerLevel world, BlockPos pos) {
+        return world.getBlockState(pos).is(Blocks.OAK_LEAVES) ||
+                world.getBlockState(pos).is(Blocks.BIRCH_LEAVES) ||
+                world.getBlockState(pos).is(Blocks.SPRUCE_LEAVES) ||
+                world.getBlockState(pos).is(Blocks.JUNGLE_LEAVES) ||
+                world.getBlockState(pos).is(Blocks.ACACIA_LEAVES) ||
+                world.getBlockState(pos).is(Blocks.DARK_OAK_LEAVES) ||
+                world.getBlockState(pos).is(Blocks.MANGROVE_LEAVES) ||
+                world.getBlockState(pos).is(Blocks.AZALEA_LEAVES) ||
+                world.getBlockState(pos).is(Blocks.FLOWERING_AZALEA_LEAVES) ||
+                world.getBlockState(pos).is(Blocks.VINE) ||
+                world.getBlockState(pos).is(Blocks.CAVE_VINES) ||
+                world.getBlockState(pos).is(Blocks.CAVE_VINES_PLANT) ||
+                world.getBlockState(pos).is(Blocks.WEEPING_VINES) ||
+                world.getBlockState(pos).is(Blocks.WEEPING_VINES_PLANT) ||
+                world.getBlockState(pos).is(Blocks.TWISTING_VINES) ||
+                world.getBlockState(pos).is(Blocks.TWISTING_VINES_PLANT);
     }
 
     private static boolean addLootToChest(ServerLevel world, BlockPos chestPos) {
@@ -170,33 +233,47 @@ public class ExplorationRewards {
         return true;
     }
 
-    private static void giveExplorerBook(Player player, int x, int y, int z) {
-        ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
-        CompoundTag tag = new CompoundTag();
+    public static void giveExplorerBook(ServerPlayer player, BlockPos treasureCoords) {
+        if (player == null || treasureCoords == null) {
+            EldoriaMod.LOGGER.error("❌ [ERREUR] Impossible de donner le Journal de l'explorateur : Joueur ou coordonnées invalides !");
+            return;
+        }
 
-        tag.putString("title", "Journal de l'Explorateur");
-        tag.putString("author", "Ancien Voyageur");
+        EldoriaMod.LOGGER.info("[DEBUG] Tentative de don du Journal de l'explorateur à {} aux coordonnées {}", player.getName().getString(), treasureCoords);
 
-        String content = """
+        player.getServer().execute(() -> { // ✅ Exécution sur le bon thread
+            ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
+            CompoundTag tag = new CompoundTag();
+
+            tag.putString("title", "Journal de l'Explorateur");
+            tag.putString("author", "Ancien Voyageur");
+
+            String content = """
         Cher aventurier,
 
         Votre exploration vous a mené à un précieux trésor !
 
-        Un coffre a été dissimulé à ces coordonnées :
+        📍 Un coffre a été dissimulé à ces coordonnées :
 
         X: %d | Y: %d | Z: %d
 
-        Bonne chance pour le retrouver !
-        """.formatted(x, y, z);
+        🏆 Bonne chance pour le retrouver !
+        """.formatted(treasureCoords.getX(), treasureCoords.getY(), treasureCoords.getZ());
 
-        ListTag pages = new ListTag();
-        pages.add(StringTag.valueOf(Component.Serializer.toJson(Component.literal(content))));
-        tag.put("pages", pages);
+            ListTag pages = new ListTag();
+            pages.add(StringTag.valueOf(Component.Serializer.toJson(Component.literal(content))));
+            tag.put("pages", pages);
 
-        book.setTag(tag);
-        player.addItem(book);
+            book.setTag(tag);
 
-        LOGGER.info("📖 Journal de l'explorateur donné à {}", player.getName().getString());
+            boolean added = player.getInventory().add(book);
+            if (!added) {
+                player.drop(book, false);
+                EldoriaMod.LOGGER.warn("⚠️ L'inventaire de {} est plein, le livre a été drop au sol.", player.getName().getString());
+            } else {
+                EldoriaMod.LOGGER.info("📖 Journal de l'explorateur donné avec succès à {}", player.getName().getString());
+            }
+        });
     }
 
     /**

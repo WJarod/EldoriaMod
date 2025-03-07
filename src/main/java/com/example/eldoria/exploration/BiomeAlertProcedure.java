@@ -1,6 +1,7 @@
 package com.example.eldoria.exploration;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
@@ -63,13 +64,16 @@ public class BiomeAlertProcedure {
                     HashSet<String> playerBiomes = discoveredBiomes.computeIfAbsent(playerId, k -> new HashSet<>());
 
                     if (playerBiomes.add(biomeName)) {
-                        // Nouveau biome découvert
+                        // ✅ Nouveau biome découvert
                         LOGGER.info("🌍 Nouveau biome découvert : {}", biomeName);
-                        player.displayClientMessage(Component.literal("🌍 Nouveau biome découvert : " + biomeName), true);
+
+                        // ✅ Affichage **au-dessus de la barre d'items** ✅
+                        ((ServerPlayer) player).displayClientMessage(Component.literal("🌍 Nouveau biome découvert : " + biomeName), true);
+
                         ExplorationRanking.updateBiomeCount(player);
                     } else {
-                        // Biome déjà visité → Juste afficher le nom
-                        player.displayClientMessage(Component.literal("🌍 " + biomeName), true);
+                        // ✅ Biome déjà visité → Juste afficher le nom
+                        ((ServerPlayer) player).displayClientMessage(Component.literal("🌍 " + biomeName), true);
                     }
                 }
             }
