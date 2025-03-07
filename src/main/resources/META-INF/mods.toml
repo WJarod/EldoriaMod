@@ -1,0 +1,35 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+
+license="MIT"
+
+[[mods]]
+modId="eldoria"
+version="1.0.0"
+displayName="Eldoria Mod"
+authors="WNova"
+description='''
+Un mod qui améliore l'exploration avec :
+- Un classement des explorateurs 🏆
+- Des trésors cachés 🎁
+- Une meilleure ambiance musicale 🌍
+'''
+
+# Ajoute une icône (optionnel, mets ton fichier dans assets/eldoria/textures/gui/logo.png)
+logoFile="logo.png"
+
+# 📌 Dépendance à Minecraft
+[[dependencies.eldoria]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="BEFORE"
+side="BOTH"
+
+# 📌 Dépendance à Forge
+[[dependencies.eldoria]]
+modId="forge"
+mandatory=true
+versionRange="[47.3.0,)"
+ordering="BEFORE"
+side="BOTH"

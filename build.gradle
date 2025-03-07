@@ -1,0 +1,129 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '6.0.33'
+}
+
+version = "1.0.0"
+group = "com.example.eldoria"
+
+base {
+    archivesName = "eldoria"
+}
+
+// Définition de Java 17 (Obligatoire pour Forge 1.20.1)
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
+
+minecraft {
+    // Définition des mappings pour Forge
+    mappings channel: "official", version: "1.20.1"
+
+    copyIdeResources = true
+
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+
+            mods {
+                "eldoria" {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        client {
+            property 'forge.enabledGameTestNamespaces', 'eldoria'
+        }
+
+        server {
+            property 'forge.enabledGameTestNamespaces', 'eldoria'
+            args '--nogui'
+        }
+
+        gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'eldoria'
+        }
+
+        data {
+            workingDirectory project.file('run-data')
+            args '--mod', 'eldoria', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+        }
+    }
+}
+
+// Inclusion des fichiers générés pour les ressources
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+repositories {
+    mavenCentral()
+    maven { url "https://modmaven.dev/" }
+}
+
+// **Dépendances sans Curios**
+dependencies {
+    minecraft "net.minecraftforge:forge:1.20.1-47.3.0"
+}
+
+// Gestion des ressources et des remplacements automatiques
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version: "1.20.1",
+            forge_version: "47.3.0",
+            mod_id: "eldoria",
+            mod_name: "Eldoria Mod",
+            mod_license: "MIT",
+            mod_version: "1.0.0",
+            mod_authors: "WNova",
+            mod_description: "Un mod qui améliore l'exploration avec un classement et des trésors cachés.",
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+// 🔥 Correction des fichiers de ressources
+tasks.named('processResources', ProcessResources).configure {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+// Configuration de l'export du JAR
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'Specification-Title'     : "eldoria",
+                'Specification-Vendor'    : "WNova",
+                'Specification-Version'   : '1',
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.jar.archiveVersion,
+                'Implementation-Vendor'   : "WNova",
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+    finalizedBy 'reobfJar'
+}
+
+// Configuration du système de publication
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifact jar
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/mcmodsrepo"
+        }
+    }
+}
+
+// Définition du format UTF-8 pour l'encodage
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
