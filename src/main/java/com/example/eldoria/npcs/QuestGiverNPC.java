@@ -110,27 +110,23 @@ public class QuestGiverNPC extends Villager {
     public InteractionResult interactAt(Player player, Vec3 hitVec, InteractionHand hand) {
         if (!this.level().isClientSide) {
             String question = getRandomEnigme();
-            String[] possibleAnswers = ENIGMES.get(question); // Récupérer les réponses possibles
-            String correctAnswer = possibleAnswers[0]; // La première réponse est toujours la bonne avant mélange
+            String[] possibleAnswers = ENIGMES.get(question);
+            String correctAnswer = possibleAnswers[0];
+            String hint = possibleAnswers.length > 4 ? possibleAnswers[4] : "Aucun indice disponible";
 
-            // Mélanger les réponses pour éviter que la bonne soit toujours en premier
-            List<String> shuffledAnswers = new ArrayList<>(Arrays.asList(possibleAnswers));
-            Collections.shuffle(shuffledAnswers);
+            // Sélectionner 3 réponses parmi les 4 possibles (hors indice)
+            List<String> answerChoices = Arrays.asList(possibleAnswers[0], possibleAnswers[1], possibleAnswers[2], possibleAnswers[3]);
+            Collections.shuffle(answerChoices);
+            int correctAnswerIndex = answerChoices.indexOf(correctAnswer);
 
-            // Trouver le nouvel index de la bonne réponse après mélange
-            int correctAnswerIndex = shuffledAnswers.indexOf(correctAnswer);
-
-            // ✅ Stocke la question pour éviter l'erreur "Je ne t’ai pas encore posé de question !"
             String playerName = player.getName().getString();
             playerQuestions.put(playerName, question);
 
             EldoriaMod.LOGGER.info("[QUEST GIVER] {} reçoit la question '{}'", playerName, question);
-            EldoriaMod.LOGGER.info("[QUEST GIVER] Contenu de playerQuestions après ajout : {}", playerQuestions);
 
-            // ✅ Ouvre la GUI côté client en envoyant un packet au lieu d'appeler directement la GUI
             if (player instanceof ServerPlayer serverPlayer) {
                 PacketHandler.CHANNEL.sendTo(
-                        new QuestGiverPacket(question, shuffledAnswers.toArray(new String[0]), correctAnswerIndex),
+                        new QuestGiverPacket(question, answerChoices.toArray(new String[0]), correctAnswerIndex, hint), // ✅ Envoi avec indice
                         serverPlayer.connection.connection,
                         NetworkDirection.PLAY_TO_CLIENT
                 );
@@ -298,7 +294,6 @@ public class QuestGiverNPC extends Villager {
      * Vérifie la réponse du joueur et affiche le résultat dans l'interface sans utiliser le chat.
      */
     public static void checkAnswer(String playerName, String response, ServerPlayer player) {
-        EldoriaMod.LOGGER.info("[CHECK ANSWER] Contenu de playerQuestions : {}", playerQuestions);
         EldoriaMod.LOGGER.info("[CHECK ANSWER] Le joueur {} tente de répondre à une question.", playerName);
 
         if (!playerQuestions.containsKey(playerName)) {
@@ -308,7 +303,9 @@ public class QuestGiverNPC extends Villager {
         }
 
         String question = playerQuestions.get(playerName);
-        String expectedAnswer = ENIGMES.getOrDefault(question, new String[]{"", ""})[0];
+        String[] answers = ENIGMES.getOrDefault(question, new String[]{"", "", "", "Aucun indice disponible"});
+        String expectedAnswer = answers[0]; // ✅ La bonne réponse est TOUJOURS la première
+        String hint = answers.length > 4 ? answers[4] : "Aucun indice disponible"; // ✅ Extraction de l’indice
 
         EldoriaMod.LOGGER.info("[DEBUG] Réponse reçue de {} : '{}'", playerName, response);
         EldoriaMod.LOGGER.info("[DEBUG] Réponse attendue : '{}'", expectedAnswer);
@@ -316,8 +313,7 @@ public class QuestGiverNPC extends Villager {
         int attempts = playerAttempts.getOrDefault(playerName, 0);
 
         if (response.equalsIgnoreCase(expectedAnswer)) {
-            // ✅ Affichage de l'animation UI avant toute autre action
-            player.displayClientMessage(Component.literal("🎉 [Aventurier Mystérieux] : Bravo, aventurier ! Voici ton indice..."), true);
+            player.displayClientMessage(Component.literal("🎉 [Aventurier Mystérieux] : Bravo, aventurier !"), true);
 
             EldoriaMod.LOGGER.info("[CHECK ANSWER] Appel de generateTreasure pour {}", player.getName().getString());
 
@@ -327,24 +323,23 @@ public class QuestGiverNPC extends Villager {
                     EldoriaMod.LOGGER.error("[CHECK ANSWER] Échec : generateTreasure a retourné null !");
                 } else {
                     EldoriaMod.LOGGER.info("[CHECK ANSWER] Trésor généré avec succès à {}", treasureCoords);
-                    // ❌ Ne pas appeler `giveExplorerBook()` ici car il est déjà dans `generateTreasure()`
                 }
             });
 
-            // ✅ Nettoyage de la question après validation
             playerQuestions.remove(playerName);
             playerAttempts.remove(playerName);
+
         } else {
             attempts++;
 
-            if (attempts == 2) {
-                player.displayClientMessage(Component.literal("💡 Indice : " + ENIGMES.get(question)[1]), true);
-            } else if (attempts >= 3) {
+            if (attempts == 1) {
+                player.displayClientMessage(Component.literal("💡 [Aventurier Mystérieux] : Indice → " + hint), true);
+            } else if (attempts >= 2) {
                 player.displayClientMessage(Component.literal("⏳ [Aventurier Mystérieux] : Tu as échoué... Reviens plus tard !"), true);
                 playerQuestions.remove(playerName);
                 playerAttempts.remove(playerName);
             } else {
-                player.displayClientMessage(Component.literal("❌ [Aventurier Mystérieux] : Ce n'est pas la bonne réponse ! Réessaye."), true);
+                player.displayClientMessage(Component.literal("❌ [Aventurier Mystérieux] : Ce n'est pas la bonne réponse ! Réessaie."), true);
             }
 
             playerAttempts.put(playerName, attempts);

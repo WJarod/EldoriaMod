@@ -1,5 +1,7 @@
 package com.example.eldoria.network;
 
+import com.example.eldoria.client.gui.QuestGiverScreen;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -9,42 +11,45 @@ public class QuestGiverPacket {
     private final String question;
     private final String[] answers;
     private final int correctAnswerIndex;
+    private final String hint; // ✅ Ajout de l'indice
 
-    public QuestGiverPacket(String question, String[] answers, int correctAnswerIndex) {
+    public QuestGiverPacket(String question, String[] answers, int correctAnswerIndex, String hint) {
         this.question = question;
         this.answers = answers;
         this.correctAnswerIndex = correctAnswerIndex;
+        this.hint = hint; // ✅ Stocke l'indice
     }
 
-    public static void encode(QuestGiverPacket packet, FriendlyByteBuf buf) {
-        buf.writeUtf(packet.question);
-        buf.writeVarInt(packet.answers.length);
+    public static void encode(QuestGiverPacket packet, FriendlyByteBuf buffer) {
+        buffer.writeUtf(packet.question);
+        buffer.writeVarInt(packet.answers.length);
         for (String answer : packet.answers) {
-            buf.writeUtf(answer);
+            buffer.writeUtf(answer);
         }
-        buf.writeVarInt(packet.correctAnswerIndex);
+        buffer.writeVarInt(packet.correctAnswerIndex);
+        buffer.writeUtf(packet.hint); // ✅ Encode aussi l'indice
     }
 
-    public static QuestGiverPacket decode(FriendlyByteBuf buf) {
-        String question = buf.readUtf();
-        int length = buf.readVarInt();
-        String[] answers = new String[length];
-        for (int i = 0; i < length; i++) {
-            answers[i] = buf.readUtf();
+    public static QuestGiverPacket decode(FriendlyByteBuf buffer) {
+        String question = buffer.readUtf();
+        int answerCount = buffer.readVarInt();
+        String[] answers = new String[answerCount];
+
+        for (int i = 0; i < answerCount; i++) {
+            answers[i] = buffer.readUtf();
         }
-        int correctAnswerIndex = buf.readVarInt();
-        return new QuestGiverPacket(question, answers, correctAnswerIndex);
+
+        int correctAnswerIndex = buffer.readVarInt();
+        String hint = buffer.readUtf(); // ✅ Récupère l'indice
+
+        return new QuestGiverPacket(question, answers, correctAnswerIndex, hint);
     }
 
     public static void handle(QuestGiverPacket packet, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new com.example.eldoria.client.gui.QuestGiverScreen(
-                            packet.question,
-                            packet.answers,
-                            packet.correctAnswerIndex
-                    )
-            );
+            Minecraft.getInstance().setScreen(new QuestGiverScreen(
+                    packet.question, packet.answers, packet.correctAnswerIndex, packet.hint // ✅ Passe aussi l'indice
+            ));
         });
         ctx.get().setPacketHandled(true);
     }
