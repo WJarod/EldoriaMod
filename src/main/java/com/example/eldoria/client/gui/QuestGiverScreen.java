@@ -28,24 +28,30 @@ public class QuestGiverScreen extends Screen {
     protected void init() {
         int startX = (this.width / 2) - 125;
         int startY = (this.height / 2) - 90;
-        int buttonWidth = 250;
+
+        int questionWidth = 250; // ✅ Largeur normale pour la question
+        int answerWidth = 100;  // ✅ Réponses très compactes
+        int hintWidth = 250;    // ✅ Largeur normale pour l’indice
         int buttonHeight = 20;
 
+        // ✅ Bouton de la question
         this.addRenderableWidget(Button.builder(Component.literal(question), (button) -> {})
-                .bounds(startX, startY, buttonWidth, buttonHeight)
+                .bounds(startX, startY, questionWidth, buttonHeight)
                 .build()
         );
 
+        // ✅ Boutons des réponses (100px de large)
         for (int i = 0; i < answers.length; i++) {
             final int index = i;
             this.addRenderableWidget(Button.builder(Component.literal(answers[i]), (button) -> onAnswerSelected(index))
-                    .bounds(startX, startY + (i * 25) + 30, buttonWidth, buttonHeight)
+                    .bounds(startX + 75, startY + (i * 25) + 30, answerWidth, buttonHeight) // ✅ Encore plus centré
                     .build()
             );
         }
 
+        // ✅ Bouton de l’indice
         hintButton = Button.builder(Component.literal("💡 Indice : ???"), (button) -> {})
-                .bounds(startX, startY + 130, buttonWidth, buttonHeight)
+                .bounds(startX, startY + 130, hintWidth, buttonHeight)
                 .build();
         hintButton.active = false;
         this.addRenderableWidget(hintButton);
