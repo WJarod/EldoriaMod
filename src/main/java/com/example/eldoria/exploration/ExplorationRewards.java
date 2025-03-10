@@ -4,8 +4,7 @@ import com.example.eldoria.EldoriaMod;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.item.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -151,85 +150,91 @@ public class ExplorationRewards {
 
         List<ItemStack> possibleLoot = new ArrayList<>();
 
-        // ✅ Ressources de base
+        // ✅ Ressources de base ultra boostées
         Collections.addAll(possibleLoot,
-                new ItemStack(Items.IRON_INGOT, 10 + random.nextInt(10)),
-                new ItemStack(Items.GOLD_INGOT, 8 + random.nextInt(6)),
-                new ItemStack(Items.EMERALD, 5 + random.nextInt(5)),
-                new ItemStack(Items.COAL, 16 + random.nextInt(16))
+                new ItemStack(Items.IRON_INGOT, 16 + random.nextInt(10)),
+                new ItemStack(Items.GOLD_INGOT, 12 + random.nextInt(8)),
+                new ItemStack(Items.EMERALD, 8 + random.nextInt(5)),
+                new ItemStack(Items.COAL, 20 + random.nextInt(10))
         );
 
-        // ✅ Nourriture
+        // ✅ Nourriture en quantité généreuse
         Collections.addAll(possibleLoot,
-                new ItemStack(Items.GOLDEN_CARROT, 10 + random.nextInt(6)),
-                new ItemStack(Items.COOKED_BEEF, 10 + random.nextInt(10)),
-                new ItemStack(Items.BREAD, 12 + random.nextInt(6))
+                new ItemStack(Items.GOLDEN_CARROT, 12 + random.nextInt(6)),
+                new ItemStack(Items.COOKED_BEEF, 14 + random.nextInt(8)),
+                new ItemStack(Items.BREAD, 16 + random.nextInt(6))
         );
 
-        // ✅ Outils enchantés
+        // ✅ Outils OP avec multi-enchantements
         List<ItemStack> tools = List.of(
-                enchantIfLucky(new ItemStack(Items.IRON_PICKAXE)),
-                enchantIfLucky(new ItemStack(Items.DIAMOND_PICKAXE)),
-                enchantIfLucky(new ItemStack(Items.IRON_AXE)),
-                enchantIfLucky(new ItemStack(Items.DIAMOND_AXE))
+                enchantOP(new ItemStack(Items.NETHERITE_PICKAXE)),
+                enchantOP(new ItemStack(Items.NETHERITE_AXE)),
+                enchantOP(new ItemStack(Items.NETHERITE_SHOVEL)),
+                enchantOP(new ItemStack(Items.DIAMOND_PICKAXE)),
+                enchantOP(new ItemStack(Items.DIAMOND_AXE)),
+                enchantOP(new ItemStack(Items.DIAMOND_SHOVEL))
         );
         possibleLoot.add(tools.get(random.nextInt(tools.size())));
 
-        // ✅ Armes et munitions
+        // ✅ Armes boostées avec enchantements avancés
         List<ItemStack> weapons = List.of(
-                enchantIfLucky(new ItemStack(Items.IRON_SWORD)),
-                enchantIfLucky(new ItemStack(Items.DIAMOND_SWORD)),
-                enchantIfLucky(new ItemStack(Items.BOW)),
-                enchantIfLucky(new ItemStack(Items.CROSSBOW))
+                enchantOP(new ItemStack(Items.NETHERITE_SWORD)),
+                enchantOP(new ItemStack(Items.DIAMOND_SWORD)),
+                enchantOP(new ItemStack(Items.BOW)),
+                enchantOP(new ItemStack(Items.CROSSBOW)),
+                enchantOP(new ItemStack(Items.TRIDENT))
         );
         ItemStack chosenWeapon = weapons.get(random.nextInt(weapons.size()));
         possibleLoot.add(chosenWeapon);
 
         if (chosenWeapon.getItem() == Items.BOW || chosenWeapon.getItem() == Items.CROSSBOW) {
-            possibleLoot.add(new ItemStack(Items.ARROW, 16 + random.nextInt(16)));
+            possibleLoot.add(new ItemStack(Items.ARROW, 24 + random.nextInt(10)));
         }
 
-        // ✅ Armure enchantée
+        // ✅ Armures légendaires
         List<ItemStack> armors = List.of(
-                enchantIfLucky(new ItemStack(Items.IRON_HELMET)),
-                enchantIfLucky(new ItemStack(Items.DIAMOND_HELMET)),
-                enchantIfLucky(new ItemStack(Items.IRON_CHESTPLATE)),
-                enchantIfLucky(new ItemStack(Items.DIAMOND_CHESTPLATE)),
-                enchantIfLucky(new ItemStack(Items.IRON_LEGGINGS)),
-                enchantIfLucky(new ItemStack(Items.DIAMOND_LEGGINGS)),
-                enchantIfLucky(new ItemStack(Items.IRON_BOOTS)),
-                enchantIfLucky(new ItemStack(Items.DIAMOND_BOOTS))
+                enchantOP(new ItemStack(Items.NETHERITE_HELMET)),
+                enchantOP(new ItemStack(Items.NETHERITE_CHESTPLATE)),
+                enchantOP(new ItemStack(Items.NETHERITE_LEGGINGS)),
+                enchantOP(new ItemStack(Items.NETHERITE_BOOTS)),
+                enchantOP(new ItemStack(Items.DIAMOND_HELMET)),
+                enchantOP(new ItemStack(Items.DIAMOND_CHESTPLATE)),
+                enchantOP(new ItemStack(Items.DIAMOND_LEGGINGS)),
+                enchantOP(new ItemStack(Items.DIAMOND_BOOTS))
         );
         possibleLoot.add(armors.get(random.nextInt(armors.size())));
 
-        // ✅ Items rares boostés
-        if (random.nextFloat() < 0.6) possibleLoot.add(new ItemStack(Items.DIAMOND, 2 + random.nextInt(3)));
-        if (random.nextFloat() < 0.5) possibleLoot.add(new ItemStack(Items.GOLDEN_APPLE, 2 + random.nextInt(2)));
-        if (random.nextFloat() < 0.4) possibleLoot.add(new ItemStack(Items.NETHERITE_SCRAP, 2 + random.nextInt(2)));
-        if (random.nextFloat() < 0.3) possibleLoot.add(new ItemStack(Items.TOTEM_OF_UNDYING));
-        if (random.nextFloat() < 0.2) possibleLoot.add(new ItemStack(Items.NETHERITE_INGOT, 2 + random.nextInt(2)));
+        // ✅ Drops ultra rares (avec chances améliorées)
+        if (random.nextFloat() < 0.8) possibleLoot.add(new ItemStack(Items.DIAMOND, 4 + random.nextInt(3)));
+        if (random.nextFloat() < 0.7) possibleLoot.add(new ItemStack(Items.GOLDEN_APPLE, 3 + random.nextInt(2)));
+        if (random.nextFloat() < 0.6) possibleLoot.add(new ItemStack(Items.NETHERITE_SCRAP, 3 + random.nextInt(2)));
+        if (random.nextFloat() < 0.5) possibleLoot.add(new ItemStack(Items.TOTEM_OF_UNDYING));
+        if (random.nextFloat() < 0.4) possibleLoot.add(new ItemStack(Items.NETHERITE_INGOT, 2 + random.nextInt(2)));
 
-        // ✅ Potions avec effets corrigés
+        // ✅ Potions ultra cheatées
         List<ItemStack> potions = List.of(
                 PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.STRENGTH),
                 PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.FIRE_RESISTANCE),
-                PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.SWIFTNESS)
+                PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.SWIFTNESS),
+                PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.REGENERATION),
+                PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.HEALING),
+                PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.LONG_SLOW_FALLING)
         );
-        if (random.nextFloat() < 0.5) possibleLoot.add(potions.get(random.nextInt(potions.size())));
+        if (random.nextFloat() < 0.7) possibleLoot.add(potions.get(random.nextInt(potions.size())));
 
-        // ✅ Mélange et placement des objets (14 à 20 slots remplis)
+        // ✅ Placement amélioré du loot (18 à 24 slots remplis)
         Collections.shuffle(possibleLoot);
         List<Integer> availableSlots = new ArrayList<>();
         for (int i = 0; i < chest.getContainerSize(); i++) availableSlots.add(i);
         Collections.shuffle(availableSlots);
 
-        int itemsToPlace = 14 + random.nextInt(7);
+        int itemsToPlace = 18 + random.nextInt(7);
         for (int i = 0; i < Math.min(itemsToPlace, possibleLoot.size()); i++) {
             chest.setItem(availableSlots.remove(0), possibleLoot.get(i));
         }
 
         chest.setChanged();
-        LOGGER.info("✅ Loot boosté ajouté dans le coffre !");
+        LOGGER.info("✅ Loot LEGEND ajouté dans le coffre !");
         return true;
     }
 
@@ -277,12 +282,46 @@ public class ExplorationRewards {
     }
 
     /**
-     * Ajoute un enchantement aléatoire à un item avec 40% de chances.
+     * Applique plusieurs enchantements puissants à un objet.
      */
-    private static ItemStack enchantIfLucky(ItemStack item) {
-        if (random.nextFloat() < 0.4) {
-            item.enchant(Enchantments.UNBREAKING, 1 + random.nextInt(3));
+    private static ItemStack enchantOP(ItemStack item) {
+        if (item.getItem() instanceof SwordItem) {
+            item.enchant(Enchantments.SHARPNESS, 3 + random.nextInt(3));
+            item.enchant(Enchantments.MOB_LOOTING, 2 + random.nextInt(2));
+            item.enchant(Enchantments.UNBREAKING, 3);
+            if (random.nextFloat() < 0.5) item.enchant(Enchantments.FIRE_ASPECT, 2);
         }
+
+        if (item.getItem() instanceof PickaxeItem) {
+            item.enchant(Enchantments.BLOCK_EFFICIENCY, 4 + random.nextInt(2));
+            item.enchant(Enchantments.UNBREAKING, 3);
+            item.enchant(Enchantments.BLOCK_FORTUNE, 2 + random.nextInt(2));
+        }
+
+        if (item.getItem() instanceof AxeItem) {
+            item.enchant(Enchantments.BLOCK_EFFICIENCY, 4 + random.nextInt(2));
+            item.enchant(Enchantments.UNBREAKING, 3);
+            if (random.nextFloat() < 0.6) item.enchant(Enchantments.SHARPNESS, 3 + random.nextInt(2));
+        }
+
+        if (item.getItem() instanceof ArmorItem) {
+            item.enchant(Enchantments.ALL_DAMAGE_PROTECTION, 4);
+            item.enchant(Enchantments.UNBREAKING, 3);
+            if (random.nextFloat() < 0.5) item.enchant(Enchantments.THORNS, 2 + random.nextInt(2));
+        }
+
+        if (item.getItem() instanceof BowItem || item.getItem() instanceof CrossbowItem) {
+            item.enchant(Enchantments.POWER_ARROWS, 4 + random.nextInt(2));
+            item.enchant(Enchantments.UNBREAKING, 3);
+            if (random.nextFloat() < 0.5) item.enchant(Enchantments.FLAMING_ARROWS, 1);
+        }
+
+        if (item.getItem() instanceof TridentItem) {
+            item.enchant(Enchantments.LOYALTY, 3);
+            item.enchant(Enchantments.IMPALING, 3 + random.nextInt(2));
+            item.enchant(Enchantments.UNBREAKING, 3);
+        }
+
         return item;
     }
 }

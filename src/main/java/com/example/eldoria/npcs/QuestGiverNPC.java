@@ -2,17 +2,14 @@ package com.example.eldoria.npcs;
 
 import com.example.eldoria.EldoriaMod;
 import com.example.eldoria.entities.ModEntities;
-import com.example.eldoria.events.ClientEventHandler;
 import com.example.eldoria.exploration.ExplorationRewards;
 import com.example.eldoria.network.PacketHandler;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -28,7 +25,6 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.Vec3;
 import com.example.eldoria.network.QuestGiverPacket;
 import net.minecraftforge.network.NetworkDirection;
-
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -210,88 +206,8 @@ public class QuestGiverNPC extends Villager {
     }
 
     /**
-     * Vérification de la réponse du joueur v1.
-    public static void checkAnswer(String playerName, String response, ServerChatEvent event) {
-        String receivedMessage = response.trim(); // Nettoyage de la réponse
-        String cleanedMessage = receivedMessage.replaceAll("literal\\{(.*)}", "$1"); // Enlève "literal{}"
-        String expectedAnswer = ENIGMES.getOrDefault(playerQuestions.get(playerName), new String[]{"", ""})[0];
-
-        // ✅ Log après nettoyage
-        EldoriaMod.LOGGER.info("[DEBUG] Réponse reçue de {} (nettoyée) : '{}'", playerName, cleanedMessage);
-        EldoriaMod.LOGGER.info("[DEBUG] Réponse attendue : '{}'", expectedAnswer);
-
-        if (!playerQuestions.containsKey(playerName)) {
-            event.getPlayer().sendSystemMessage(Component.literal("📜 [Aventurier Mystérieux] : Je ne t’ai pas encore posé de question !"));
-            return;
-        }
-
-        String correctAnswer = ENIGMES.getOrDefault(playerQuestions.get(playerName), new String[]{"", ""})[0];
-
-        int attempts = playerAttempts.getOrDefault(playerName, 0);
-
-        if (cleanedMessage.equalsIgnoreCase(expectedAnswer)) {
-            event.getPlayer().sendSystemMessage(Component.literal("🎉 [Aventurier Mystérieux] : Bravo, aventurier ! Voici ton indice..."));
-            BlockPos treasureCoords = ExplorationRewards.generateTreasure(event.getPlayer());
-
-            // ✅ Suppression de la question et des tentatives après succès
-            playerQuestions.remove(playerName);
-            playerAttempts.remove(playerName);
-
-            // ✅ Trouver le PNJ à proximité pour le faire disparaître après 30 secondes
-            ServerLevel world = (ServerLevel) event.getPlayer().level();
-            final QuestGiverNPC pnj = (QuestGiverNPC) world.getEntities(null, event.getPlayer().getBoundingBox().inflate(10))
-                    .stream()
-                    .filter(entity -> entity instanceof QuestGiverNPC)
-                    .findFirst()
-                    .orElse(null);
-
-            if (pnj != null) {
-                BlockPos campfirePos = pnj.blockPosition().below(); // Position du camp
-
-                // ✅ Planifier la disparition du PNJ et du camp après 30 secondes SANS bloquer
-                scheduler.schedule(() -> {
-                    world.getServer().execute(() -> {
-                        try {
-                            Thread.sleep(30000); // ⏳ Attente de 30 secondes
-                            world.getServer().execute(() -> {
-                                if (pnj.isAlive()) {
-                                    pnj.discard(); // ✅ Supprimer le PNJ
-                                    if (pnj.campfirePos != null) {
-                                        world.setBlock(pnj.campfirePos, Blocks.AIR.defaultBlockState(), 3);
-                                        EldoriaMod.LOGGER.info("🔥 Feu de camp retiré à {}", pnj.campfirePos);
-                                    }
-                                    if (pnj.chestPos != null) {
-                                        world.setBlock(pnj.chestPos, Blocks.AIR.defaultBlockState(), 3);
-                                        EldoriaMod.LOGGER.info("📦 Coffre retiré à {}", pnj.chestPos);
-                                    }
-                                    event.getPlayer().sendSystemMessage(Component.literal("🌫️ L'Aventurier Mystérieux a replié son camp et est parti explorer d'autres terres..."));
-                                    EldoriaMod.LOGGER.info("[DEBUG] L'Aventurier Mystérieux et son camp ont disparu.");
-                                }
-                            });
-                        } catch (InterruptedException e) {
-                            EldoriaMod.LOGGER.error("❌ Erreur dans le timer de disparition du PNJ", e);
-                            Thread.currentThread().interrupt();
-                        }
-                    });
-                }, 30, TimeUnit.SECONDS);
-            }
-        } else {
-            attempts++;
-            if (attempts == 2) {
-                event.getPlayer().sendSystemMessage(Component.literal("💡 [Aventurier Mystérieux] : Indice : " + ENIGMES.get(playerQuestions.get(playerName))[1]));
-            } else if (attempts >= 3) {
-                event.getPlayer().sendSystemMessage(Component.literal("⏳ [Aventurier Mystérieux] : Tu as échoué... Reviens plus tard !"));
-                playerQuestions.remove(playerName);
-                playerAttempts.remove(playerName);
-            } else {
-                event.getPlayer().sendSystemMessage(Component.literal("❌ [Aventurier Mystérieux] : Ce n'est pas la bonne réponse ! Réessaye."));
-            }
-            playerAttempts.put(playerName, attempts);
-        }
-    }*/
-
-    /**
      * Vérifie la réponse du joueur et affiche le résultat dans l'interface sans utiliser le chat.
+     * 🔹 V2 : Suppression uniquement du PNJ après 10 secondes, en laissant le camp en place.
      */
     public static void checkAnswer(String playerName, String response, ServerPlayer player) {
         EldoriaMod.LOGGER.info("[CHECK ANSWER] Le joueur {} tente de répondre à une question.", playerName);
@@ -326,6 +242,31 @@ public class QuestGiverNPC extends Villager {
                 }
             });
 
+            // ✅ Récupération du PNJ et planification de sa suppression après 10 secondes (camp reste en place)
+            ServerLevel world = (ServerLevel) player.level();
+            final QuestGiverNPC pnj = (QuestGiverNPC) world.getEntities(null, player.getBoundingBox().inflate(10))
+                    .stream()
+                    .filter(entity -> entity instanceof QuestGiverNPC)
+                    .map(entity -> (QuestGiverNPC) entity)
+                    .findFirst()
+                    .orElse(null);
+
+            if (pnj != null) {
+                EldoriaMod.LOGGER.info("⏳ Suppression du PNJ prévue dans 10 secondes...");
+
+                scheduler.schedule(() -> {
+                    world.getServer().execute(() -> {
+                        if (pnj.isAlive()) {
+                            pnj.discard(); // ✅ Suppression du PNJ
+                            EldoriaMod.LOGGER.info("✅ PNJ supprimé.");
+                            player.displayClientMessage(Component.literal("🌫️ L'Aventurier Mystérieux s'en va, mais son camp reste à votre disposition..."), true);
+                            EldoriaMod.LOGGER.info("[DEBUG] L'Aventurier Mystérieux a disparu.");
+                        }
+                    });
+                }, 10, TimeUnit.SECONDS);
+            }
+
+            // ✅ Suppression de la question et des tentatives après succès
             playerQuestions.remove(playerName);
             playerAttempts.remove(playerName);
 
